@@ -1,1 +1,5 @@
-
+transformers
+langchain
+faiss-cpu
+torch
+dotenv
