@@ -1,6 +1,3 @@
-# AI Scholar Task List #2 (both Low Level & High Level)
-## Low Level
-
 ## AI Scholar: Comprehensive Low-Level Task List
 
 This task list provides a detailed breakdown of the steps involved in building your "AI Scholar" physics research chatbot.  It incorporates the refinements and suggestions we've discussed based on your project proposal:
