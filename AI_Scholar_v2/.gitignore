@@ -1,0 +1,13 @@
+# Python files
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.log
+.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Data
+data/
