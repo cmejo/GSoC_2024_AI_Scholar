@@ -13,6 +13,7 @@ This Google Summer of Code 2024 project by Christopher Mejo includes scripts to 
 git clone https://github.com/cmejo//GSoC_2024_AI_Scholar/edit/main/AI_Scholar_v2/rag-chatbot.git
 cd rag-chatbot
 pip install -r requirements.txt
+```
 
 ## Project Structure
 
