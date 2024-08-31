@@ -22,3 +22,7 @@ def preprocess_texts(texts):
 if __name__ == "__main__":
     sample_text = "This is a sample text for preprocessing, including tokenization and stopword removal."
     print(preprocess_text(sample_text))
+    
+from src.finetune_word2vec import finetune_word2vec_model
+
+fine_tuned_model = finetune_word2vec_model("word2vec.model", preprocessed_texts)
