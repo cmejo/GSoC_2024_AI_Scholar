@@ -1,0 +1,21 @@
+# fine_tuning_word2vec.ipynb
+
+from src.finetune_word2vec import finetune_word2vec_model
+from src.data_ingestion import pdf_to_text
+from src.text_preprocessing import preprocess_texts
+from gensim.models import Word2Vec
+
+# Load and preprocess the text data
+pdf_folder = '../home/cmejo/arxiv-dataset/pdf'
+texts = preprocess_texts(pdf_to_text(pdf_folder))
+
+# Fine-tune the Word2Vec model
+existing_model_path = "../word2vec.model"
+model = finetune_word2vec_model(existing_model_path, texts, epochs=5)
+
+# Analyze the fine-tuned Word2Vec model
+word = 'neural'
+similar_words = model.wv.most_similar(word)
+print(f"Words most similar to '{word}' after fine-tuning:")
+for similar_word, score in similar_words:
+    print(f"{similar_word}: {score:.4f}")
