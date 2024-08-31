@@ -1,0 +1,28 @@
+# data_exploration.ipynb
+
+import os
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from src.data_ingestion import pdf_to_text
+
+pdf_folder = '../data/pdfs'
+texts = pdf_to_text(pdf_folder)
+
+# Visualizing the distribution of document lengths
+doc_lengths = [len(text['text'].split()) for text in texts]
+plt.figure(figsize=(10, 6))
+plt.hist(doc_lengths, bins=50, color='blue', alpha=0.7)
+plt.title('Distribution of Document Lengths')
+plt.xlabel('Number of Words')
+plt.ylabel('Frequency')
+plt.show()
+
+# Generate a word cloud
+all_text = " ".join([text['text'] for text in texts])
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(all_text)
+
+plt.figure(figsize=(10, 6))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.title('Word Cloud of ArXiv Papers')
+plt.show()
