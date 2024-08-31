@@ -55,6 +55,6 @@ def convert_pdfs_to_text(pdf_folder, output_folder):
         print(f"Converted {pdf_file} to {output_file}")
 
 # Example usage
-pdf_folder = '~/arxiv-dataset'
-output_folder = '~/arxiv-dataset/plain-text-converted'
+pdf_folder = '/home/cmejo/arxiv-dataset'
+output_folder = '/home/cmejo/arxiv-dataset/plain-text-converted'
 convert_pdfs_to_text(pdf_folder, output_folder)
