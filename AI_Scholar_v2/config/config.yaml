@@ -2,5 +2,5 @@ model:
   name: "Meta-Llama-3.1-8B "
 
 data:
-  pdf_folder: "data/pdfs"
+  pdf_folder: "data/pdf"
   output_folder: "data/texts"
