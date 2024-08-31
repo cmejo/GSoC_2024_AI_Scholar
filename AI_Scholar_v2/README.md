@@ -23,32 +23,33 @@ pip install -r requirements.txt
 Feel free to open issues or submit pull requests.
 
 ## Project Structure
-
-- rag-chatbot/
-- ├── README.md
-- ├── LICENSE
-- ├── .gitignore
-- ├── setup.py
-- ├── requirements.txt
-- ├── src/
-- │   ├── __init__.py
-- │   ├── data_ingestion.py
-- │   ├── retriever.py
-- │   ├── generator.py
-- │   ├── rag_chain.py
-- │   ├── chatbot.py
-- │   ├── utils.py
-- ├── config/
-- │   ├── __init__.py
-- │   ├── config.yaml
-- ├── tests/
-- │   ├── __init__.py
-- │   ├── test_data_ingestion.py
-- │   ├── test_retriever.py
-- │   ├── test_generator.py
-- │   ├── test_rag_chain.py
-- │   ├── test_chatbot.py
-- └── notebooks/
--     ├── data_exploration.ipynb  
--     ├── model_tuning.ipynb
-  -    ├── chatbot_demo.ipynb
+```
+rag-chatbot/
+├── README.md
+├── LICENSE
+├── .gitignore
+├── setup.py
+├── requirements.txt
+├── src/
+│   ├── __init__.py
+│   ├── data_ingestion.py
+│   ├── retriever.py
+│   ├── generator.py
+│   ├── rag_chain.py
+│   ├── chatbot.py
+│   ├── utils.py
+├── config/
+│   ├── __init__.py
+│   ├── config.yaml
+├── tests/
+│   ├── __init__.py
+│   ├── test_data_ingestion.py
+│   ├── test_retriever.py
+│   ├── test_generator.py
+│   ├── test_rag_chain.py
+│   ├── test_chatbot.py
+└── notebooks/
+    ├── data_exploration.ipynb  
+    ├── model_tuning.ipynb
+    ├── chatbot_demo.ipynb
+```
