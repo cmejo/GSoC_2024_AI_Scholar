@@ -16,9 +16,30 @@ cd word2vec-knowledge-graph
 pip install -r requirements.txt
 ```
 ## Usage
+
+1. To ingest data from PDFs:
+```
+python src/data_ingestion.py
+```
+2. To preprocess the text data:
+```
+python src/text_preprocessing.py
+
+```
+3. Training Word2Vec Model
+```
+python src/word2vec_training.py
+```
+4. To fine-tune the existing Word2Vec model:
+```
+python src/finetune_word2vec.py
+```
+5. To build and visualize the knowledge graph:
+
 ```
 python src/knowledge_graph.py
 ```
+
 ## Project Structure
 
 ```
