@@ -43,5 +43,7 @@ pip install -r requirements.txt
 - │   ├── test_chatbot.py
 - └── notebooks/
      ├── data_exploration.ipynb
+  
      ├── model_tuning.ipynb
+  
      ├── chatbot_demo.ipynb
