@@ -14,6 +14,13 @@ git clone https://github.com/cmejo//GSoC_2024_AI_Scholar/edit/main/AI_Scholar_v2
 cd rag-chatbot
 pip install -r requirements.txt
 ```
+## Usage
+
+```python src/chatbot.py
+```
+## Contributing
+
+Feel free to open issues or submit pull requests.
 
 ## Project Structure
 
