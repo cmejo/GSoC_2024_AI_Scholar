@@ -19,6 +19,39 @@ pip install -r requirements.txt
 ```
 python src/knowledge_graph.py
 ```
+## Project Structure
+
+```
+└── word2vec-knowledge-graph/
+    ├── README.md
+    ├── LICENSE
+    ├── .gitignore
+    ├── setup.py
+    ├── requirements.txt
+    ├── src/
+    │   ├── __init__.py
+    │   ├── data_ingestion.py
+    │   ├── text_preprocessing.py
+    │   ├── word2vec_training.py
+    │   ├── knowledge_graph.py
+    │   └── utils.py
+    ├── config/
+    │   ├── __init__.py
+    │   └── config.yaml
+    ├── notebooks/
+    │   ├── data_exploration.ipynb
+    │   ├── word2vec_training.ipynb
+    │   └── knowledge_graph_creation.ipynb
+    ├── tests/
+    │   ├── __init__.py
+    │   ├── test_data_ingestion.py
+    │   ├── test_text_preprocessing.py
+    │   ├── test_word2vec_training.py
+    │   └── test_knowledge_graph.py
+    └── data/
+        └── pdfs/
+
+```
 ## Contributing
 Feel free to open issues or submit pull requests.
 
