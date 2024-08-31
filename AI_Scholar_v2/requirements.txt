@@ -1,0 +1,7 @@
+langchain
+transformers
+llama-cpp-python
+pypdf
+faiss-cpu
+torch
+dotenv
