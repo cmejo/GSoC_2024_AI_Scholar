@@ -1,0 +1,12 @@
+model:
+  vector_size: 100
+  window: 5
+  min_count: 5
+  workers: 4
+
+data:
+  pdf_folder: "/home/cmejo/arxiv-dataset/pdf"
+  output_folder: "/home/cmejo/arxiv-dataset/plain-text-converted"
+
+graph:
+  threshold: 0.7
