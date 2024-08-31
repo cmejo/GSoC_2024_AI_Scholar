@@ -16,7 +16,8 @@ cd word2vec-knowledge-graph
 pip install -r requirements.txt
 ```
 ## Usage
-```python src/knowledge_graph.py
+```
+python src/knowledge_graph.py
 ```
 ## Contributing
 ```
