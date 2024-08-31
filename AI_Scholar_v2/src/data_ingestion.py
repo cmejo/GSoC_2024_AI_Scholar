@@ -14,6 +14,6 @@ def pdf_to_text(pdf_folder):
     return texts
 
 if __name__ == "__main__":
-    pdf_folder = '~/arxiv-dataset'
+    pdf_folder = '/home/cmejo/arxiv-dataset/pdf'
     texts = pdf_to_text(pdf_folder)
     print(texts)
