@@ -1,0 +1,19 @@
+# word2vec_training.ipynb
+
+from src.text_preprocessing import preprocess_texts
+from src.word2vec_training import train_word2vec_model
+from src.data_ingestion import pdf_to_text
+
+# Load and preprocess the text data
+pdf_folder = '../home/cmejo/arxiv-dataset/pdf'
+texts = preprocess_texts(pdf_to_text(pdf_folder))
+
+# Train the Word2Vec model
+model = train_word2vec_model(texts, vector_size=100, window=5, min_count=5, workers=4)
+
+# Analyze the Word2Vec model
+word = 'science'
+similar_words = model.wv.most_similar(word)
+print(f"Words most similar to '{word}':")
+for similar_word, score in similar_words:
+    print(f"{similar_word}: {score:.4f}")
