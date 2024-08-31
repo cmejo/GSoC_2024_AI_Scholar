@@ -32,10 +32,20 @@ def convert_pdfs_to_text(pdf_folder, output_folder):
     for pdf_file in pdf_files:
         pdf_path = os.path.join(pdf_folder, pdf_file)
         text = extract_text_from_pdf(pdf_path)
-        
-        # Optionally format text using LaTeX if needed
-        # You can include custom logic here to detect specific patterns
-        # and wrap them in LaTeX commands.
+
+        def format_text_with_latex(text):
+    """
+    Apply LaTeX formatting to certain patterns in the text.
+    """
+    # Example: Replace certain keywords with LaTeX equivalents
+    text = text.replace("Some Keyword", "\\textbf{Some Keyword}")
+    
+    # Additional LaTeX formatting logic goes here
+    
+    return text
+
+      # Optionally format text using LaTeX
+        text = format_text_with_latex(text)
         
         # Save to a .txt file
         output_file = os.path.splitext(pdf_file)[0] + '.txt'
