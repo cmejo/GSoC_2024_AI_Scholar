@@ -1,0 +1,13 @@
+# knowledge_graph_creation.ipynb
+
+from src.knowledge_graph import build_knowledge_graph, visualize_graph
+from gensim.models import Word2Vec
+
+# Load the trained Word2Vec model
+model = Word2Vec.load("../word2vec.model")
+
+# Build the knowledge graph
+graph = build_knowledge_graph(model, threshold=0.7)
+
+# Visualize the knowledge graph
+visualize_graph(graph)
