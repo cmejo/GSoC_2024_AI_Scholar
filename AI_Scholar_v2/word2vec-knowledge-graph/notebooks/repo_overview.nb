@@ -1,0 +1,13 @@
+# Repo Overview
+
+Welcome to the Word2Vec Knowledge Graph repository! This notebook will walk you through the key components of the repository, explaining how each part contributes to the overall project.
+
+## 1. Data Ingestion
+We start by ingesting data from PDF files located in the `data/pdfs/` directory. The `data_ingestion.py` script extracts text from these PDFs.
+
+```python
+from src.data_ingestion import pdf_to_text
+
+pdf_folder = '../home/cmejo/arxiv-dataset/pdf'
+texts = pdf_to_text(pdf_folder)
+print(texts[:1])  # Display the text from the first PDF
