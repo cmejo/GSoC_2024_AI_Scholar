@@ -96,3 +96,7 @@ Suggestions for the API endpoints re for the AngularJS frontend web GUI:
 		Method: GET (to retrieve profile), POST (to update profile)
 
 		Request/Response Bodies: Design based on the user profile information that I decide to store and manage.
+
+## implement user authentication, authorization, rate limiting, error handling (e.g., HTTP error codes 400, 429 etc..) on proper API endpoints
+
+## document API endpoints with OpenAI (Swagger) to aide frontend dev in understanding and use the API
