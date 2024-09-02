@@ -1,4 +1,4 @@
-# AI Scholar RAG Chatbot v2
+# AI Scholar: A Novel AI RAG-aware Model for Academic Paper Analysis
 
 This Google Summer of Code 2024 project by Christopher Mejo includes scripts to preprocess data, create a chatbot using a retrieval-augmented generation (RAG) approach, build a knowledge graph, and visualize data.
 
