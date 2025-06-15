@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="AI Chatbot - Intelligent conversation assistant">
+    <meta name="theme-color" content="#2563eb">
+    
+    <title>AI Chatbot</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="AI Chatbot">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>AI Chatbot</h2>
+            <p>Initializing...</p>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="bot-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="bot-info">
+                        <h1 class="bot-name">AI Assistant</h1>
+                        <div class="bot-status" id="bot-status">
+                            <span class="status-indicator"></span>
+                            <span class="status-text">Online</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="header-btn" id="settings-btn" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button class="header-btn" id="clear-chat-btn" title="Clear Chat">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="header-btn" id="menu-btn" title="Menu">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Chat Messages Container -->
+        <main class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <!-- Welcome Message -->
+                <div class="message-group bot-message">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-bubble">
+                            <p>👋 Hello! I'm your AI assistant. How can I help you today?</p>
+                        </div>
+                        <div class="message-time">Just now</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                <div class="message-group bot-message">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-bubble typing-bubble">
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Chat Input -->
+        <footer class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <div class="input-group">
+                    <button class="input-btn" id="attach-btn" title="Attach file">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <div class="input-field-container">
+                        <textarea 
+                            id="message-input" 
+                            class="message-input" 
+                            placeholder="Type your message..."
+                            rows="1"
+                            maxlength="2000"
+                        ></textarea>
+                        <div class="input-actions">
+                            <button class="input-btn" id="emoji-btn" title="Add emoji">
+                                <i class="fas fa-smile"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="send-btn" id="send-btn" title="Send message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="input-footer">
+                    <div class="character-count">
+                        <span id="char-count">0</span>/2000
+                    </div>
+                    <div class="connection-status" id="connection-status">
+                        <i class="fas fa-wifi"></i>
+                        <span>Connected</span>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" id="settings-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label for="theme-select">Theme</label>
+                    <select id="theme-select" class="setting-input">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="auto">Auto</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="font-size-select">Font Size</label>
+                    <select id="font-size-select" class="setting-input">
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="sound-toggle">Sound Effects</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="sound-toggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label for="notifications-toggle">Notifications</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="notifications-toggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div id="error-toast" class="toast error-toast">
+        <div class="toast-content">
+            <i class="fas fa-exclamation-circle"></i>
+            <span class="toast-message"></span>
+        </div>
+        <button class="toast-close">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <!-- Success Toast -->
+    <div id="success-toast" class="toast success-toast">
+        <div class="toast-content">
+            <i class="fas fa-check-circle"></i>
+            <span class="toast-message"></span>
+        </div>
+        <button class="toast-close">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script>
+        // Global configuration
+        window.CHATBOT_CONFIG = {
+            sessionId: '{{ session_id }}',
+            apiEndpoint: '/api/chat',
+            healthEndpoint: '/api/health',
+            maxMessageLength: 2000,
+            typingDelay: 1000,
+            autoReconnect: true
+        };
+    </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
