@@ -1,4 +1,4 @@
-# 🤖 AI Chatbot - Advanced Conversational Interface
+# 🤖 AI Scholar Chatbot: A Novel AI RAG-aware Model for Academic Paper Analysis - Advanced Conversational Interface
 
 A modern, full-stack AI chatbot application with advanced features including JWT authentication, real-time chat, session management, and a responsive React frontend.
 
