@@ -1,0 +1,214 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-chatbot-web-gui"
+description = "Responsive, mobile-ready web GUI for AI chatbot services"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: Flask",
+    "Topic :: Communications :: Chat",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+keywords = ["chatbot", "ai", "web-gui", "flask", "responsive", "mobile", "pwa"]
+requires-python = ">=3.8"
+dependencies = [
+    "flask>=2.3.3",
+    "flask-socketio>=5.3.6",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0"
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pylint>=2.17.0",
+    "bandit>=1.7.0",
+    "safety>=2.3.0",
+    "pre-commit>=3.0.0"
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "requests-mock>=1.10.0"
+]
+docs = [
+    "sphinx>=6.0.0",
+    "sphinx-rtd-theme>=1.2.0",
+    "myst-parser>=1.0.0"
+]
+deploy = [
+    "gunicorn>=20.1.0",
+    "eventlet>=0.33.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/your-username/ai-chatbot-web-gui"
+Documentation = "https://github.com/your-username/ai-chatbot-web-gui#readme"
+Repository = "https://github.com/your-username/ai-chatbot-web-gui.git"
+Issues = "https://github.com/your-username/ai-chatbot-web-gui/issues"
+Changelog = "https://github.com/your-username/ai-chatbot-web-gui/releases"
+
+[project.scripts]
+chatbot-web = "app:main"
+
+[tool.setuptools_scm]
+write_to = "_version.py"
+
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | env
+  | chatbot_env
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["app"]
+skip_glob = ["**/chatbot_env/**", "**/venv/**", "**/env/**"]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "E501", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "chatbot_env",
+    "venv",
+    "env",
+    "build",
+    "dist",
+    ".eggs"
+]
+per-file-ignores = [
+    "__init__.py:F401"
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+exclude = [
+    "chatbot_env/",
+    "venv/",
+    "env/",
+    "build/",
+    "dist/"
+]
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-docstring",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-statements",
+    "line-too-long"
+]
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.bandit]
+exclude_dirs = ["chatbot_env", "venv", "env", "tests"]
+skips = ["B101"]  # Skip assert_used test
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml"
+]
+testpaths = [
+    "tests",
+    "."
+]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning"
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests"
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "*/chatbot_env/*",
+    "*/venv/*",
+    "*/env/*",
+    "*/tests/*",
+    "test_*.py",
+    "demo.py"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:"
+]

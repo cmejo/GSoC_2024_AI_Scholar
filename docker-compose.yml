@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: chatbot-postgres
+    environment:
+      - POSTGRES_DB=${DB_NAME:-chatbot_db}
+      - POSTGRES_USER=${DB_USER:-chatbot_user}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-chatbot_password}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-chatbot_user} -d ${DB_NAME:-chatbot_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend service (existing Flask app)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    container_name: chatbot-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-llama2}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-chatbot_db}
+      - DB_USER=${DB_USER:-chatbot_user}
+      - DB_PASSWORD=${DB_PASSWORD:-chatbot_password}
+      - FLASK_ENV=${FLASK_ENV:-production}
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend service (new React app)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: chatbot-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: chatbot-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+networks:
+  chatbot-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  logs:
+    driver: local

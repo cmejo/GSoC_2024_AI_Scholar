@@ -1,0 +1,282 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+jobs:
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for better analysis
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install black isort flake8 mypy pylint bandit safety radon
+
+    - name: Code formatting with Black
+      run: |
+        black --check --diff --color .
+
+    - name: Import sorting with isort
+      run: |
+        isort --check-only --diff --color .
+
+    - name: Linting with flake8
+      run: |
+        flake8 . --format=json --output-file=flake8-report.json
+        flake8 . --statistics
+
+    - name: Type checking with mypy
+      run: |
+        mypy . --ignore-missing-imports --json-report mypy-report || true
+
+    - name: Code analysis with pylint
+      run: |
+        pylint **/*.py --output-format=json > pylint-report.json || true
+        pylint **/*.py || true
+
+    - name: Security analysis with bandit
+      run: |
+        bandit -r . -x ./chatbot_env/,./venv/,./env/ -f json -o bandit-report.json
+        bandit -r . -x ./chatbot_env/,./venv/,./env/
+
+    - name: Dependency security check
+      run: |
+        safety check --json --output safety-report.json
+        safety check
+
+    - name: Code complexity analysis
+      run: |
+        radon cc . --json > complexity-report.json
+        radon cc . --show-complexity --min B
+
+    - name: Maintainability index
+      run: |
+        radon mi . --json > maintainability-report.json
+        radon mi . --show --min B
+
+    - name: Upload code quality reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: code-quality-reports
+        path: |
+          flake8-report.json
+          mypy-report/
+          pylint-report.json
+          bandit-report.json
+          safety-report.json
+          complexity-report.json
+          maintainability-report.json
+
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies and run tests
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+        python -m pytest test_chatbot.py --cov=app --cov-report=xml
+
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python', 'javascript' ]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v3
+      with:
+        fail-on-severity: moderate
+
+  license-check:
+    name: License Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install pip-licenses
+      run: |
+        pip install pip-licenses
+
+    - name: Check licenses
+      run: |
+        pip install -r requirements.txt
+        pip-licenses --format=json --output-file=licenses.json
+        pip-licenses --fail-on="GPL"  # Fail if GPL licenses found
+
+    - name: Upload license report
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-report
+        path: licenses.json
+
+  documentation-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check for required documentation
+      run: |
+        # Check if required files exist
+        required_files=("README.md" "DEPLOYMENT.md" "requirements.txt" ".gitignore")
+        
+        for file in "${required_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "❌ Missing required file: $file"
+            exit 1
+          else
+            echo "✅ Found: $file"
+          fi
+        done
+
+    - name: Check README completeness
+      run: |
+        # Check if README contains required sections
+        required_sections=("Features" "Installation" "Usage" "Configuration")
+        
+        for section in "${required_sections[@]}"; do
+          if ! grep -q "$section" README.md; then
+            echo "⚠️  README.md might be missing section: $section"
+          else
+            echo "✅ README contains: $section"
+          fi
+        done
+
+    - name: Validate markdown files
+      uses: DavidAnson/markdownlint-cli2-action@v13
+      with:
+        globs: '**/*.md'
+
+    - name: Check for broken links
+      uses: gaurav-nelson/github-action-markdown-link-check@v1
+      with:
+        use-quiet-mode: 'yes'
+        use-verbose-mode: 'yes'
+        config-file: '.github/mlc_config.json'
+
+  performance-analysis:
+    name: Performance Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install memory-profiler line-profiler
+
+    - name: Memory profiling
+      run: |
+        # Create a simple memory profiling script
+        cat > memory_profile.py << 'EOF'
+        from memory_profiler import profile
+        import app
+
+        @profile
+        def test_app_startup():
+            chatbot = app.ChatbotService()
+            return chatbot
+
+        if __name__ == "__main__":
+            test_app_startup()
+        EOF
+        
+        python memory_profile.py > memory-profile.txt || true
+
+    - name: Upload performance reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-analysis
+        path: |
+          memory-profile.txt

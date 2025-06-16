@@ -1,0 +1,216 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[FEATURE] "
+labels: ["enhancement", "feature-request"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! ✨
+        
+        We appreciate your ideas for improving the AI Chatbot Web GUI.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: I have searched existing issues to ensure this feature hasn't been requested
+          required: true
+        - label: I have checked the roadmap to see if this is already planned
+          required: true
+        - label: This feature would benefit the broader user community
+          required: true
+
+  - type: textarea
+    id: feature-summary
+    attributes:
+      label: ✨ Feature Summary
+      description: A brief, clear summary of the feature you'd like to see
+      placeholder: Summarize your feature request in 1-2 sentences
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature-category
+    attributes:
+      label: 🎯 Feature Category
+      description: What category does this feature fall into?
+      options:
+        - UI/UX Enhancement
+        - New Chat Feature
+        - Mobile/PWA Improvement
+        - Performance Optimization
+        - Accessibility
+        - Integration (AI Models/Services)
+        - Developer Experience
+        - Security
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: 🎯 Problem Statement
+      description: What problem does this feature solve? Is your feature request related to a problem?
+      placeholder: |
+        Describe the problem or limitation you're experiencing.
+        Example: "I'm frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: 💡 Proposed Solution
+      description: Describe the solution you'd like to see implemented
+      placeholder: |
+        A clear and detailed description of what you want to happen.
+        Include any specific implementation ideas if you have them.
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-stories
+    attributes:
+      label: 👤 User Stories
+      description: Describe how users would interact with this feature
+      placeholder: |
+        As a [type of user], I want [goal] so that [benefit].
+        
+        Example:
+        - As a mobile user, I want voice input so that I can chat hands-free
+        - As a developer, I want API documentation so that I can integrate easily
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: ✅ Acceptance Criteria
+      description: What specific criteria must be met for this feature to be considered complete?
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] Criterion 3
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔄 Alternative Solutions
+      description: Describe any alternative solutions or features you've considered
+      placeholder: What other approaches could solve this problem?
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🚨 Priority Level
+      description: How important is this feature to you?
+      options:
+        - Low - Nice to have
+        - Medium - Would improve my experience
+        - High - Significantly impacts my usage
+        - Critical - Blocking my usage
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: 🔧 Estimated Complexity
+      description: How complex do you think this feature would be to implement?
+      options:
+        - Low - Simple change or addition
+        - Medium - Moderate development effort
+        - High - Significant development effort
+        - Unknown - Not sure about complexity
+
+  - type: checkboxes
+    id: implementation-areas
+    attributes:
+      label: 🛠️ Implementation Areas
+      description: Which parts of the codebase would likely be affected?
+      options:
+        - label: Frontend (HTML/CSS/JavaScript)
+        - label: Backend (Python/Flask)
+        - label: WebSocket communication
+        - label: Database/Storage
+        - label: AI Integration
+        - label: Mobile/PWA features
+        - label: Documentation
+        - label: Testing
+        - label: Deployment/DevOps
+        - label: Not sure
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: 🎨 Mockups or Examples
+      description: Include any mockups, wireframes, or examples that illustrate your idea
+      placeholder: |
+        Drag and drop images here, or describe the visual design.
+        You can also link to similar features in other applications.
+
+  - type: textarea
+    id: technical-considerations
+    attributes:
+      label: ⚙️ Technical Considerations
+      description: Any technical aspects, constraints, or requirements to consider?
+      placeholder: |
+        - Performance implications
+        - Browser compatibility requirements
+        - Mobile considerations
+        - Security concerns
+        - Third-party integrations
+
+  - type: checkboxes
+    id: target-users
+    attributes:
+      label: 👥 Target Users
+      description: Who would benefit from this feature?
+      options:
+        - label: End users (people chatting with the AI)
+        - label: Developers (integrating or extending the chatbot)
+        - label: System administrators (deploying/managing)
+        - label: Mobile users specifically
+        - label: Accessibility users
+        - label: Power users (advanced features)
+        - label: All users
+
+  - type: textarea
+    id: success-metrics
+    attributes:
+      label: 📊 Success Metrics
+      description: How would we measure the success of this feature?
+      placeholder: |
+        How would we know this feature is working well?
+        - User engagement metrics
+        - Performance improvements
+        - User feedback
+        - Usage statistics
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 📝 Additional Context
+      description: Add any other context, screenshots, or examples about the feature request
+      placeholder: |
+        - Links to similar features in other apps
+        - Research or articles supporting this feature
+        - Community feedback or requests
+        - Any other relevant information
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 🤝 Contribution
+      description: Are you interested in contributing to this feature?
+      options:
+        - label: I'd like to work on implementing this feature
+        - label: I can help with testing this feature
+        - label: I can help with documentation
+        - label: I can provide feedback during development
+        - label: I'm just suggesting the idea

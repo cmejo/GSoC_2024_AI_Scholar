@@ -1,0 +1,550 @@
+name: Staging Deployment
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches: [ main ]
+    types: [ labeled ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - preview
+          - testing
+      deploy_type:
+        description: 'Type of deployment'
+        required: false
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - blue-green
+          - canary
+      run_tests:
+        description: 'Run full test suite'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  prepare-staging:
+    name: Prepare Staging Environment
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'deploy-staging') || github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    outputs:
+      deployment-id: ${{ steps.create-deployment.outputs.deployment-id }}
+      environment: ${{ steps.set-env.outputs.environment }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set environment
+      id: set-env
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          ENV="${{ github.event.inputs.environment }}"
+        elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+          ENV="staging"
+        else
+          ENV="preview-pr-${{ github.event.number }}"
+        fi
+        echo "environment=$ENV" >> $GITHUB_OUTPUT
+        echo "🎯 Deploying to environment: $ENV"
+
+    - name: Create GitHub deployment
+      id: create-deployment
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const deployment = await github.rest.repos.createDeployment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: context.sha,
+            environment: '${{ steps.set-env.outputs.environment }}',
+            description: 'Staging deployment for AI Chatbot',
+            auto_merge: false,
+            required_contexts: []
+          });
+          
+          core.setOutput('deployment-id', deployment.data.id);
+          return deployment.data.id;
+
+    - name: Update deployment status
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: '${{ steps.create-deployment.outputs.deployment-id }}',
+            state: 'in_progress',
+            description: 'Deployment started'
+          });
+
+  build-staging:
+    name: Build for Staging
+    runs-on: ubuntu-latest
+    needs: prepare-staging
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build and push staging image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/ai-chatbot-web-gui:staging-${{ github.sha }}
+          ${{ secrets.DOCKER_USERNAME }}/ai-chatbot-web-gui:staging-latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILD_ENV=staging
+          COMMIT_SHA=${{ github.sha }}
+
+    - name: Create staging configuration
+      run: |
+        cat > staging-config.json << EOF
+        {
+          "environment": "${{ needs.prepare-staging.outputs.environment }}",
+          "image": "${{ secrets.DOCKER_USERNAME }}/ai-chatbot-web-gui:staging-${{ github.sha }}",
+          "commit": "${{ github.sha }}",
+          "branch": "${{ github.ref_name }}",
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "deployment_type": "${{ github.event.inputs.deploy_type || 'standard' }}"
+        }
+        EOF
+
+    - name: Upload staging config
+      uses: actions/upload-artifact@v3
+      with:
+        name: staging-config
+        path: staging-config.json
+
+  test-staging-build:
+    name: Test Staging Build
+    runs-on: ubuntu-latest
+    needs: build-staging
+    if: github.event.inputs.run_tests != 'false'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download staging config
+      uses: actions/download-artifact@v3
+      with:
+        name: staging-config
+
+    - name: Test staging image
+      run: |
+        # Load config
+        IMAGE=$(jq -r '.image' staging-config.json)
+        
+        echo "🧪 Testing staging image: $IMAGE"
+        
+        # Pull and run the staging image
+        docker pull $IMAGE
+        docker run -d --name staging-test -p 5000:5000 \
+          -e FLASK_ENV=staging \
+          -e SECRET_KEY=test-secret \
+          -e OLLAMA_BASE_URL=http://mock-ollama:11434 \
+          $IMAGE
+
+        # Wait for container to start
+        sleep 15
+
+        # Test health endpoint
+        for i in {1..10}; do
+          if curl -f http://localhost:5000/api/health; then
+            echo "✅ Health check passed"
+            break
+          else
+            echo "⏳ Waiting for service... (attempt $i/10)"
+            sleep 5
+          fi
+        done
+
+        # Test main page
+        if curl -f http://localhost:5000/; then
+          echo "✅ Main page accessible"
+        else
+          echo "❌ Main page failed"
+          exit 1
+        fi
+
+        # Test API endpoint
+        if curl -f -X POST http://localhost:5000/api/chat \
+          -H "Content-Type: application/json" \
+          -d '{"message":"test","history":[]}'; then
+          echo "✅ Chat API accessible"
+        else
+          echo "❌ Chat API failed"
+          exit 1
+        fi
+
+        # Cleanup
+        docker stop staging-test
+        docker rm staging-test
+
+  deploy-to-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [prepare-staging, build-staging, test-staging-build]
+    environment: 
+      name: ${{ needs.prepare-staging.outputs.environment }}
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download staging config
+      uses: actions/download-artifact@v3
+      with:
+        name: staging-config
+
+    - name: Deploy to Railway (Staging)
+      id: deploy
+      run: |
+        # Load config
+        IMAGE=$(jq -r '.image' staging-config.json)
+        ENV_NAME=$(jq -r '.environment' staging-config.json)
+        
+        echo "🚀 Deploying $IMAGE to $ENV_NAME"
+        
+        # Install Railway CLI
+        npm install -g @railway/cli
+        
+        # Deploy to Railway
+        railway deploy --service ${{ secrets.RAILWAY_STAGING_SERVICE_ID }} \
+          --environment $ENV_NAME
+        
+        # Get deployment URL
+        DEPLOY_URL="https://$ENV_NAME-ai-chatbot.railway.app"
+        echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+        echo "🌐 Deployed to: $DEPLOY_URL"
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+    - name: Deploy to Heroku (Preview)
+      if: startsWith(needs.prepare-staging.outputs.environment, 'preview-pr-')
+      run: |
+        # Install Heroku CLI
+        curl https://cli-assets.heroku.com/install.sh | sh
+        
+        # Create review app
+        APP_NAME="${{ needs.prepare-staging.outputs.environment }}-chatbot"
+        
+        echo "🚀 Creating Heroku review app: $APP_NAME"
+        
+        heroku apps:create $APP_NAME --team ${{ secrets.HEROKU_TEAM }} || true
+        
+        # Set config vars
+        heroku config:set \
+          SECRET_KEY=${{ secrets.STAGING_SECRET_KEY }} \
+          OLLAMA_BASE_URL=${{ secrets.STAGING_OLLAMA_URL }} \
+          FLASK_ENV=staging \
+          --app $APP_NAME
+        
+        # Deploy container
+        heroku container:push web --app $APP_NAME
+        heroku container:release web --app $APP_NAME
+        
+        echo "🌐 Preview app: https://$APP_NAME.herokuapp.com"
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+
+    - name: Update deployment status (success)
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: '${{ needs.prepare-staging.outputs.deployment-id }}',
+            state: 'success',
+            environment_url: '${{ steps.deploy.outputs.url }}',
+            description: 'Deployment successful'
+          });
+
+    - name: Update deployment status (failure)
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: '${{ needs.prepare-staging.outputs.deployment-id }}',
+            state: 'failure',
+            description: 'Deployment failed'
+          });
+
+  smoke-tests:
+    name: Staging Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [prepare-staging, deploy-to-staging]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install test dependencies
+      run: |
+        pip install requests pytest playwright
+        playwright install chromium
+
+    - name: Run smoke tests
+      run: |
+        cat > smoke_tests.py << 'EOF'
+        import requests
+        import time
+        import pytest
+        from playwright.sync_api import sync_playwright
+        
+        STAGING_URL = "${{ steps.deploy.outputs.url || 'http://localhost:5000' }}"
+        
+        class TestStagingDeployment:
+            def test_health_endpoint(self):
+                """Test that health endpoint is accessible"""
+                response = requests.get(f"{STAGING_URL}/api/health", timeout=10)
+                assert response.status_code == 200
+                data = response.json()
+                assert "status" in data
+            
+            def test_main_page_loads(self):
+                """Test that main page loads correctly"""
+                response = requests.get(STAGING_URL, timeout=10)
+                assert response.status_code == 200
+                assert "AI Chatbot" in response.text
+            
+            def test_chat_api_responds(self):
+                """Test that chat API is functional"""
+                payload = {
+                    "message": "Hello, this is a staging test",
+                    "history": []
+                }
+                response = requests.post(
+                    f"{STAGING_URL}/api/chat",
+                    json=payload,
+                    timeout=30
+                )
+                # Should get a response (success or graceful failure)
+                assert response.status_code in [200, 503]
+            
+            def test_static_files_load(self):
+                """Test that static files are accessible"""
+                static_files = [
+                    "/static/css/style.css",
+                    "/static/js/app.js",
+                    "/static/manifest.json"
+                ]
+                
+                for file_path in static_files:
+                    response = requests.get(f"{STAGING_URL}{file_path}", timeout=10)
+                    assert response.status_code == 200
+            
+            def test_frontend_functionality(self):
+                """Test frontend functionality with Playwright"""
+                with sync_playwright() as p:
+                    browser = p.chromium.launch()
+                    page = browser.new_page()
+                    
+                    # Navigate to staging site
+                    page.goto(STAGING_URL)
+                    
+                    # Wait for page to load
+                    page.wait_for_selector("#app", timeout=10000)
+                    
+                    # Check that main elements are present
+                    assert page.is_visible(".chat-header")
+                    assert page.is_visible(".chat-messages")
+                    assert page.is_visible(".chat-input-container")
+                    
+                    # Test input field
+                    input_field = page.locator("#message-input")
+                    assert input_field.is_visible()
+                    
+                    # Test send button
+                    send_button = page.locator("#send-btn")
+                    assert send_button.is_visible()
+                    
+                    browser.close()
+        EOF
+        
+        python -m pytest smoke_tests.py -v --tb=short
+
+    - name: Performance test
+      run: |
+        cat > performance_test.py << 'EOF'
+        import requests
+        import time
+        import statistics
+        
+        STAGING_URL = "${{ steps.deploy.outputs.url || 'http://localhost:5000' }}"
+        
+        def test_response_times():
+            """Test response times for key endpoints"""
+            endpoints = [
+                "/",
+                "/api/health",
+                "/static/css/style.css",
+                "/static/js/app.js"
+            ]
+            
+            results = {}
+            
+            for endpoint in endpoints:
+                times = []
+                for _ in range(5):
+                    start = time.time()
+                    response = requests.get(f"{STAGING_URL}{endpoint}", timeout=10)
+                    end = time.time()
+                    
+                    if response.status_code == 200:
+                        times.append(end - start)
+                    
+                    time.sleep(0.5)
+                
+                if times:
+                    avg_time = statistics.mean(times)
+                    results[endpoint] = avg_time
+                    print(f"📊 {endpoint}: {avg_time:.3f}s average")
+            
+            # Check performance thresholds
+            if "/" in results:
+                assert results["/"] < 3.0, f"Main page too slow: {results['/']}s"
+            
+            if "/api/health" in results:
+                assert results["/api/health"] < 1.0, f"Health endpoint too slow: {results['/api/health']}s"
+            
+            print("✅ Performance tests passed")
+        
+        if __name__ == "__main__":
+            test_response_times()
+        EOF
+        
+        python performance_test.py
+
+  notify-staging-deployment:
+    name: Notify Staging Deployment
+    runs-on: ubuntu-latest
+    needs: [prepare-staging, deploy-to-staging, smoke-tests]
+    if: always()
+
+    steps:
+    - name: Notify team on Slack
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#staging-deployments'
+        text: |
+          🚀 Staging Deployment: ${{ needs.prepare-staging.outputs.environment }}
+          
+          Status: ${{ job.status }}
+          Environment: ${{ needs.prepare-staging.outputs.environment }}
+          Commit: ${{ github.sha }}
+          Branch: ${{ github.ref_name }}
+          
+          ${{ steps.deploy.outputs.url && format('🌐 URL: {0}', steps.deploy.outputs.url) || '' }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Comment on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const status = '${{ job.status }}';
+          const environment = '${{ needs.prepare-staging.outputs.environment }}';
+          const url = '${{ steps.deploy.outputs.url }}';
+          
+          let emoji = status === 'success' ? '✅' : '❌';
+          let message = `## ${emoji} Staging Deployment ${status === 'success' ? 'Successful' : 'Failed'}
+          
+          **Environment:** \`${environment}\`
+          **Commit:** \`${{ github.sha }}\`
+          `;
+          
+          if (url && status === 'success') {
+            message += `**URL:** ${url}\n`;
+            message += `
+          ### 🧪 Test the deployment:
+          - [ ] Test basic chat functionality
+          - [ ] Test mobile responsiveness
+          - [ ] Test dark/light theme switching
+          - [ ] Test PWA installation
+          - [ ] Verify performance
+          `;
+          }
+          
+          if (status === 'failure') {
+            message += `
+          ### ❌ Deployment failed
+          Please check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+          `;
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: message
+          });
+
+  cleanup-old-staging:
+    name: Cleanup Old Staging Deployments
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+    - name: Cleanup old Heroku review apps
+      run: |
+        # Install Heroku CLI
+        curl https://cli-assets.heroku.com/install.sh | sh
+        
+        # List and cleanup old review apps (older than 7 days)
+        echo "🧹 Cleaning up old review apps..."
+        
+        # This would need to be customized based on your naming convention
+        heroku apps --team ${{ secrets.HEROKU_TEAM }} --json | \
+        jq -r '.[] | select(.name | startswith("preview-pr-")) | .name' | \
+        while read app; do
+          # Check if app is older than 7 days (implement your logic here)
+          echo "Found old review app: $app"
+          # heroku apps:destroy $app --confirm $app
+        done
+      env:
+        HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}

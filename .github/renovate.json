@@ -1,0 +1,84 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    "security:openssf-scorecard"
+  ],
+  "timezone": "UTC",
+  "schedule": ["before 6am on Monday"],
+  "labels": ["dependencies", "automated"],
+  "assignees": [],
+  "reviewers": [],
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "updateNotScheduled": false,
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "🔄 Dependency Dashboard",
+  "dependencyDashboardHeader": "This issue lists Renovate updates and detected dependencies. Read the [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/) docs to learn more.",
+  "commitMessagePrefix": "chore(deps):",
+  "semanticCommits": "enabled",
+  "packageRules": [
+    {
+      "matchDepTypes": ["devDependencies"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "matchPackagePatterns": ["^@types/"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "groupName": "minor dependencies",
+      "groupSlug": "minor-deps"
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "groupName": "major dependencies",
+      "groupSlug": "major-deps",
+      "dependencyDashboardApproval": true
+    },
+    {
+      "matchPackageNames": ["python"],
+      "allowedVersions": ">=3.8"
+    },
+    {
+      "matchPackageNames": ["flask"],
+      "allowedVersions": ">=2.0.0"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions",
+      "pinDigests": true
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security", "vulnerability"]
+  },
+  "osvVulnerabilityAlerts": true,
+  "python": {
+    "enabled": true
+  },
+  "pip_requirements": {
+    "enabled": true,
+    "fileMatch": ["(^|/)requirements.*\\.txt$"]
+  },
+  "dockerfile": {
+    "enabled": true
+  },
+  "github-actions": {
+    "enabled": true,
+    "fileMatch": ["\\.github/workflows/[^/]+\\.ya?ml$"]
+  }
+}

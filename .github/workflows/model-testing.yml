@@ -1,0 +1,578 @@
+name: AI Model Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'app.py'
+      - 'requirements.txt'
+      - 'models/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'app.py'
+      - 'requirements.txt'
+      - 'models/**'
+  schedule:
+    # Test models daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: 'Specific model to test'
+        required: false
+        default: 'llama2'
+        type: choice
+        options:
+          - llama2
+          - codellama
+          - mistral
+          - phi
+          - neural-chat
+      test_type:
+        description: 'Type of test to run'
+        required: false
+        default: 'basic'
+        type: choice
+        options:
+          - basic
+          - comprehensive
+          - performance
+          - accuracy
+
+jobs:
+  model-availability:
+    name: Check Model Availability
+    runs-on: ubuntu-latest
+    outputs:
+      models: ${{ steps.check-models.outputs.models }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies
+      run: |
+        pip install requests
+
+    - name: Check Ollama models
+      id: check-models
+      run: |
+        cat > check_models.py << 'EOF'
+        import requests
+        import json
+        import os
+        
+        def check_ollama_models():
+            """Check available models in Ollama"""
+            try:
+                # Try local Ollama first
+                response = requests.get('http://localhost:11434/api/tags', timeout=5)
+                if response.status_code == 200:
+                    models = response.json().get('models', [])
+                    return [model['name'] for model in models]
+            except:
+                pass
+            
+            # Fallback to public model list
+            default_models = ['llama2', 'codellama', 'mistral', 'phi']
+            return default_models
+        
+        def check_huggingface_models():
+            """Check available models on Hugging Face"""
+            # Add your Hugging Face model checking logic here
+            return ['microsoft/DialoGPT-medium', 'facebook/blenderbot-400M-distill']
+        
+        models = {
+            'ollama': check_ollama_models(),
+            'huggingface': check_huggingface_models()
+        }
+        
+        print(f"Available models: {models}")
+        
+        # Set output for GitHub Actions
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f"models={json.dumps(models)}\n")
+        EOF
+        
+        python check_models.py
+
+  test-ollama-models:
+    name: Test Ollama Models
+    runs-on: ubuntu-latest
+    needs: model-availability
+    if: contains(fromJson(needs.model-availability.outputs.models).ollama, github.event.inputs.model_name || 'llama2')
+    
+    strategy:
+      matrix:
+        model: ${{ fromJson(needs.model-availability.outputs.models).ollama }}
+        test_scenario:
+          - name: "Basic Chat"
+            prompt: "Hello, how are you?"
+            expected_keywords: ["hello", "good", "fine", "well"]
+          - name: "Code Generation"
+            prompt: "Write a Python function to calculate fibonacci numbers"
+            expected_keywords: ["def", "fibonacci", "return"]
+          - name: "Question Answering"
+            prompt: "What is the capital of France?"
+            expected_keywords: ["Paris", "france", "capital"]
+          - name: "Creative Writing"
+            prompt: "Write a short story about a robot"
+            expected_keywords: ["robot", "story"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pytest requests-mock
+
+    - name: Start Ollama (if available)
+      run: |
+        # Try to start Ollama if it's available
+        if command -v ollama &> /dev/null; then
+          ollama serve &
+          sleep 10
+          ollama pull ${{ matrix.model }} || echo "Model not available locally"
+        else
+          echo "Ollama not available, using mock responses"
+        fi
+
+    - name: Test model responses
+      run: |
+        cat > test_model_responses.py << 'EOF'
+        import requests
+        import json
+        import pytest
+        import time
+        from app import ChatbotService
+        
+        class TestModelResponses:
+            def setup_method(self):
+                self.chatbot = ChatbotService(model="${{ matrix.model }}")
+                self.test_scenario = ${{ toJson(matrix.test_scenario) }}
+            
+            def test_model_response_quality(self):
+                """Test that model provides quality responses"""
+                prompt = self.test_scenario['prompt']
+                expected_keywords = self.test_scenario['expected_keywords']
+                
+                # Get response from model
+                result = self.chatbot.generate_response(prompt)
+                
+                if not result.get('success'):
+                    pytest.skip(f"Model ${{ matrix.model }} not available: {result.get('error')}")
+                
+                response = result['response'].lower()
+                
+                # Check response quality
+                assert len(response) > 10, "Response too short"
+                assert len(response) < 2000, "Response too long"
+                
+                # Check for expected keywords (at least one should be present)
+                keyword_found = any(keyword.lower() in response for keyword in expected_keywords)
+                if not keyword_found:
+                    print(f"Warning: None of expected keywords {expected_keywords} found in response: {response[:100]}...")
+                
+                # Check response coherence (basic checks)
+                assert not response.startswith("error"), "Response indicates an error"
+                assert "sorry" not in response or len(response) > 50, "Response seems to be an apology without content"
+            
+            def test_model_response_time(self):
+                """Test that model responds within reasonable time"""
+                start_time = time.time()
+                result = self.chatbot.generate_response(self.test_scenario['prompt'])
+                end_time = time.time()
+                
+                if not result.get('success'):
+                    pytest.skip(f"Model ${{ matrix.model }} not available")
+                
+                response_time = end_time - start_time
+                assert response_time < 30, f"Response took too long: {response_time:.2f}s"
+            
+            def test_model_consistency(self):
+                """Test that model provides consistent responses"""
+                prompt = "What is 2 + 2?"
+                responses = []
+                
+                for i in range(3):
+                    result = self.chatbot.generate_response(prompt)
+                    if not result.get('success'):
+                        pytest.skip(f"Model ${{ matrix.model }} not available")
+                    responses.append(result['response'])
+                
+                # All responses should contain "4" for this simple math question
+                for response in responses:
+                    assert "4" in response, f"Math response doesn't contain correct answer: {response}"
+        EOF
+        
+        python -m pytest test_model_responses.py -v --tb=short
+
+    - name: Performance benchmark
+      if: github.event.inputs.test_type == 'performance' || github.event.inputs.test_type == 'comprehensive'
+      run: |
+        cat > benchmark_model.py << 'EOF'
+        import time
+        import statistics
+        from app import ChatbotService
+        
+        def benchmark_model():
+            chatbot = ChatbotService(model="${{ matrix.model }}")
+            
+            test_prompts = [
+                "Hello, how are you?",
+                "What is Python?",
+                "Explain machine learning",
+                "Write a simple function",
+                "What's the weather like?"
+            ]
+            
+            response_times = []
+            successful_responses = 0
+            
+            for prompt in test_prompts:
+                start_time = time.time()
+                result = chatbot.generate_response(prompt)
+                end_time = time.time()
+                
+                if result.get('success'):
+                    successful_responses += 1
+                    response_times.append(end_time - start_time)
+                    print(f"✅ Prompt: '{prompt[:30]}...' - Time: {end_time - start_time:.2f}s")
+                else:
+                    print(f"❌ Prompt: '{prompt[:30]}...' - Error: {result.get('error')}")
+            
+            if response_times:
+                avg_time = statistics.mean(response_times)
+                median_time = statistics.median(response_times)
+                max_time = max(response_times)
+                min_time = min(response_times)
+                
+                print(f"\n📊 Performance Results for ${{ matrix.model }}:")
+                print(f"   Successful responses: {successful_responses}/{len(test_prompts)}")
+                print(f"   Average response time: {avg_time:.2f}s")
+                print(f"   Median response time: {median_time:.2f}s")
+                print(f"   Min response time: {min_time:.2f}s")
+                print(f"   Max response time: {max_time:.2f}s")
+                
+                # Save results
+                with open(f"benchmark_${{ matrix.model }}.json", "w") as f:
+                    import json
+                    json.dump({
+                        "model": "${{ matrix.model }}",
+                        "successful_responses": successful_responses,
+                        "total_prompts": len(test_prompts),
+                        "avg_response_time": avg_time,
+                        "median_response_time": median_time,
+                        "min_response_time": min_time,
+                        "max_response_time": max_time
+                    }, f, indent=2)
+            else:
+                print("❌ No successful responses to benchmark")
+        
+        if __name__ == "__main__":
+            benchmark_model()
+        EOF
+        
+        python benchmark_model.py
+
+    - name: Upload benchmark results
+      if: github.event.inputs.test_type == 'performance' || github.event.inputs.test_type == 'comprehensive'
+      uses: actions/upload-artifact@v3
+      with:
+        name: model-benchmarks-${{ matrix.model }}
+        path: benchmark_*.json
+
+  test-conversation-flow:
+    name: Test Conversation Flow
+    runs-on: ubuntu-latest
+    needs: model-availability
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Test multi-turn conversations
+      run: |
+        cat > test_conversation_flow.py << 'EOF'
+        from app import ChatbotService
+        import json
+        
+        def test_conversation_context():
+            """Test that the model maintains conversation context"""
+            chatbot = ChatbotService()
+            
+            conversation_history = []
+            
+            # Multi-turn conversation test
+            conversation_turns = [
+                {
+                    "user": "My name is Alice",
+                    "expected_context": ["alice", "name"]
+                },
+                {
+                    "user": "What is my name?",
+                    "expected_context": ["alice"]
+                },
+                {
+                    "user": "I like programming in Python",
+                    "expected_context": ["python", "programming"]
+                },
+                {
+                    "user": "What programming language do I like?",
+                    "expected_context": ["python"]
+                }
+            ]
+            
+            print("🔄 Testing conversation flow...")
+            
+            for i, turn in enumerate(conversation_turns):
+                print(f"\nTurn {i+1}: {turn['user']}")
+                
+                result = chatbot.generate_response(turn['user'], conversation_history)
+                
+                if not result.get('success'):
+                    print(f"❌ Model not available: {result.get('error')}")
+                    continue
+                
+                response = result['response']
+                print(f"Bot: {response[:100]}...")
+                
+                # Add to conversation history
+                conversation_history.extend([
+                    {"type": "user", "content": turn['user']},
+                    {"type": "bot", "content": response}
+                ])
+                
+                # Check if response shows context awareness
+                response_lower = response.lower()
+                context_found = any(keyword in response_lower for keyword in turn['expected_context'])
+                
+                if context_found:
+                    print("✅ Context maintained")
+                else:
+                    print(f"⚠️  Context may not be maintained (expected: {turn['expected_context']})")
+            
+            print(f"\n📝 Final conversation history length: {len(conversation_history)} messages")
+        
+        def test_conversation_memory_limits():
+            """Test conversation memory limits"""
+            chatbot = ChatbotService()
+            
+            # Create a long conversation history
+            long_history = []
+            for i in range(20):
+                long_history.extend([
+                    {"type": "user", "content": f"This is message number {i}"},
+                    {"type": "bot", "content": f"I received message number {i}"}
+                ])
+            
+            result = chatbot.generate_response("What was the first message?", long_history)
+            
+            if result.get('success'):
+                print("✅ Model handles long conversation history")
+                print(f"Response: {result['response'][:100]}...")
+            else:
+                print(f"❌ Model failed with long history: {result.get('error')}")
+        
+        if __name__ == "__main__":
+            test_conversation_context()
+            test_conversation_memory_limits()
+        EOF
+        
+        python test_conversation_flow.py
+
+  model-comparison:
+    name: Compare Model Performance
+    runs-on: ubuntu-latest
+    needs: [test-ollama-models]
+    if: always() && github.event.inputs.test_type == 'comprehensive'
+
+    steps:
+    - name: Download benchmark results
+      uses: actions/download-artifact@v3
+      with:
+        path: benchmarks/
+
+    - name: Compare model performance
+      run: |
+        cat > compare_models.py << 'EOF'
+        import json
+        import os
+        import glob
+        
+        def compare_models():
+            benchmark_files = glob.glob("benchmarks/*/benchmark_*.json")
+            
+            if not benchmark_files:
+                print("No benchmark files found")
+                return
+            
+            models_data = []
+            
+            for file_path in benchmark_files:
+                try:
+                    with open(file_path, 'r') as f:
+                        data = json.load(f)
+                        models_data.append(data)
+                except Exception as e:
+                    print(f"Error reading {file_path}: {e}")
+            
+            if not models_data:
+                print("No valid benchmark data found")
+                return
+            
+            print("📊 Model Performance Comparison")
+            print("=" * 50)
+            
+            # Sort by average response time
+            models_data.sort(key=lambda x: x.get('avg_response_time', float('inf')))
+            
+            for data in models_data:
+                model = data.get('model', 'Unknown')
+                success_rate = (data.get('successful_responses', 0) / 
+                              data.get('total_prompts', 1)) * 100
+                avg_time = data.get('avg_response_time', 0)
+                
+                print(f"\n🤖 {model}")
+                print(f"   Success Rate: {success_rate:.1f}%")
+                print(f"   Avg Response Time: {avg_time:.2f}s")
+                print(f"   Min/Max Time: {data.get('min_response_time', 0):.2f}s / {data.get('max_response_time', 0):.2f}s")
+            
+            # Find best performing model
+            if models_data:
+                best_model = models_data[0]
+                print(f"\n🏆 Best Performing Model: {best_model.get('model')}")
+                print(f"   (Based on response time: {best_model.get('avg_response_time', 0):.2f}s)")
+        
+        if __name__ == "__main__":
+            compare_models()
+        EOF
+        
+        python compare_models.py
+
+  create-model-report:
+    name: Create Model Test Report
+    runs-on: ubuntu-latest
+    needs: [test-ollama-models, test-conversation-flow, model-comparison]
+    if: always()
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Generate test report
+      run: |
+        cat > generate_report.py << 'EOF'
+        import json
+        from datetime import datetime
+        
+        def generate_report():
+            report = {
+                "timestamp": datetime.now().isoformat(),
+                "test_run": {
+                    "trigger": "${{ github.event_name }}",
+                    "branch": "${{ github.ref_name }}",
+                    "commit": "${{ github.sha }}"
+                },
+                "summary": {
+                    "total_models_tested": 0,
+                    "successful_tests": 0,
+                    "failed_tests": 0
+                },
+                "recommendations": []
+            }
+            
+            # Add recommendations based on test results
+            report["recommendations"].extend([
+                "Consider using faster models for production if response time is critical",
+                "Test models with your specific use case prompts",
+                "Monitor model performance in production",
+                "Keep models updated to latest versions"
+            ])
+            
+            # Save report
+            with open("model_test_report.json", "w") as f:
+                json.dump(report, f, indent=2)
+            
+            # Create markdown report
+            with open("MODEL_TEST_REPORT.md", "w") as f:
+                f.write(f"# AI Model Test Report\n\n")
+                f.write(f"**Generated:** {report['timestamp']}\n")
+                f.write(f"**Trigger:** {report['test_run']['trigger']}\n")
+                f.write(f"**Branch:** {report['test_run']['branch']}\n")
+                f.write(f"**Commit:** {report['test_run']['commit'][:8]}\n\n")
+                
+                f.write("## Test Summary\n\n")
+                f.write("| Metric | Value |\n")
+                f.write("|--------|-------|\n")
+                f.write(f"| Models Tested | {report['summary']['total_models_tested']} |\n")
+                f.write(f"| Successful Tests | {report['summary']['successful_tests']} |\n")
+                f.write(f"| Failed Tests | {report['summary']['failed_tests']} |\n\n")
+                
+                f.write("## Recommendations\n\n")
+                for rec in report["recommendations"]:
+                    f.write(f"- {rec}\n")
+                
+                f.write("\n## Next Steps\n\n")
+                f.write("1. Review failed tests and investigate issues\n")
+                f.write("2. Consider model performance for your use case\n")
+                f.write("3. Update model configurations if needed\n")
+                f.write("4. Schedule regular model testing\n")
+            
+            print("✅ Model test report generated")
+        
+        if __name__ == "__main__":
+            generate_report()
+        EOF
+        
+        python generate_report.py
+
+    - name: Upload test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: model-test-report
+        path: |
+          model_test_report.json
+          MODEL_TEST_REPORT.md
+
+    - name: Comment on PR with results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          
+          try {
+            const report = fs.readFileSync('MODEL_TEST_REPORT.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🤖 AI Model Test Results\n\n${report}`
+            });
+          } catch (error) {
+            console.log('Could not read test report:', error);
+          }

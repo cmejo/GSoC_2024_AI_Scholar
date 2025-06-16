@@ -1,0 +1,171 @@
+name: 🐛 Bug Report
+description: Report a bug to help us improve
+title: "[BUG] "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! 🐛
+        
+        Please fill out the sections below to help us understand and reproduce the issue.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following before submitting
+      options:
+        - label: I have searched existing issues to ensure this bug hasn't been reported
+          required: true
+        - label: I have tested this with the latest version
+          required: true
+        - label: I have included all relevant information below
+          required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: 🐛 Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: 🔄 Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: ✅ Expected Behavior
+      description: A clear description of what you expected to happen
+      placeholder: What should have happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: ❌ Actual Behavior
+      description: A clear description of what actually happened
+      placeholder: What actually happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 📸 Screenshots
+      description: If applicable, add screenshots to help explain your problem
+      placeholder: Drag and drop images here or paste them
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: 🌐 Browser
+      description: Which browser are you using?
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Mobile Safari (iOS)
+        - Chrome Mobile (Android)
+        - Other (please specify in additional context)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device-type
+    attributes:
+      label: 📱 Device Type
+      description: What type of device are you using?
+      options:
+        - Desktop
+        - Laptop
+        - Tablet
+        - Mobile Phone
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 💻 Operating System
+      description: What operating system are you using?
+      placeholder: e.g., Windows 11, macOS 13, Ubuntu 22.04, iOS 16, Android 13
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: 🐍 Python Version
+      description: What version of Python are you using?
+      placeholder: e.g., 3.11.0
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: 🤖 App Version
+      description: What version of the AI Chatbot are you using?
+      placeholder: e.g., v1.0.0, latest from main branch
+
+  - type: textarea
+    id: console-logs
+    attributes:
+      label: 📋 Console Logs
+      description: Please include any relevant console logs or error messages
+      placeholder: Paste console logs here...
+      render: shell
+
+  - type: textarea
+    id: network-info
+    attributes:
+      label: 🌐 Network Information
+      description: Any relevant network information (if the issue is connection-related)
+      placeholder: |
+        - Connection type: WiFi/Ethernet/Mobile
+        - Ollama server status: Running/Not running
+        - Any proxy or firewall settings
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 📝 Additional Context
+      description: Add any other context about the problem here
+      placeholder: Any additional information that might be helpful...
+
+  - type: checkboxes
+    id: feature-areas
+    attributes:
+      label: 🎯 Affected Features
+      description: Which features are affected by this bug?
+      options:
+        - label: Chat interface
+        - label: Real-time messaging (WebSocket)
+        - label: Mobile responsiveness
+        - label: Dark/Light theme
+        - label: Settings panel
+        - label: Offline functionality (PWA)
+        - label: Voice input/output
+        - label: File attachments
+        - label: Notifications
+        - label: Performance
+        - label: Other (please specify in additional context)

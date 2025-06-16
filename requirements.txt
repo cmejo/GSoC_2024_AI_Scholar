@@ -1,32 +1,16 @@
-  requests==2.31.0
-  flask==2.3.3
-  flask-socketio==5.3.6
-  python-dotenv==1.0.0
-  streamlit==1.28.0
-  gradio==3.50.0                                                                         
-  EOF                                                                                    
-                                                                                         
-  # Install dependencies                                                                 
-  pip install -r requirements.txt                                                        
-                                                                                         
-  echo "📦 Dependencies installed"                                                                                                                                                │
-  # Check if Ollama is installed                                                         
-  if ! command -v ollama &> /dev/null; then                                              
-      echo "⚠️  Ollama not found. Installing via Homebrew..."                             
-      if command -v brew &> /dev/null; then                                              
-          brew install ollama                                                            
-      else                                                                               
-          echo "❌ Homebrew not found. Please install Ollama manually from               
-  https://ollama.ai/"                                                                    
-          exit 1                                                                         
-      fi                                                                                 
-  fi                                                                                     
-                                                                                         
-  echo "✅ Setup complete!"                                                              
-  echo "📍 Project location: $(pwd)"                                                     
-  echo ""                                                                                
-  echo "Next steps:"                                                                     
-  echo "1. Start Ollama: ollama serve"                                                   
- echo "2. Pull a model: ollama pull llama2"                                             
- echo "3. Create your chatbot files using the code provided"                            
-  echo "4. Run your chatbot!"
+requests==2.31.0
+flask==2.3.3
+flask-socketio==5.3.6
+flask-cors==4.0.0
+python-dotenv==1.0.0
+pyjwt==2.8.0
+werkzeug==2.3.7
+psycopg2-binary==2.9.7
+flask-sqlalchemy==3.0.5
+flask-migrate==4.0.5
+pytest==7.4.2
+pytest-flask==1.2.0
+pytest-cov==4.1.0
+factory-boy==3.3.0
+click==8.1.7
+alembic==1.12.1

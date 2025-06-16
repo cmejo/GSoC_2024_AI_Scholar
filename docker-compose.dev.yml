@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for development
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: chatbot-postgres-dev
+    environment:
+      - POSTGRES_DB=${DB_NAME:-chatbot_dev_db}
+      - POSTGRES_USER=${DB_USER:-chatbot_dev_user}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-chatbot_dev_password}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-chatbot_dev_user} -d ${DB_NAME:-chatbot_dev_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL Database for testing
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: chatbot-postgres-test
+    environment:
+      - POSTGRES_DB=${TEST_DB_NAME:-chatbot_test_db}
+      - POSTGRES_USER=${TEST_DB_USER:-chatbot_test_user}
+      - POSTGRES_PASSWORD=${TEST_DB_PASSWORD:-chatbot_test_password}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5434:5432"  # Different port for test database
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TEST_DB_USER:-chatbot_test_user} -d ${TEST_DB_NAME:-chatbot_test_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend service (development mode)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: chatbot-backend-dev
+    ports:
+      - "5000:5000"
+    environment:
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-llama2}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-jwt-secret}
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - DB_HOST=postgres-dev
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-chatbot_dev_db}
+      - DB_USER=${DB_USER:-chatbot_dev_user}
+      - DB_PASSWORD=${DB_PASSWORD:-chatbot_dev_password}
+    volumes:
+      - .:/app
+      - /app/chatbot_env
+      - /app/__pycache__
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+
+  # Frontend service (development mode)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: chatbot-frontend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - chatbot-network
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+networks:
+  chatbot-network:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  postgres_test_data:
+    driver: local

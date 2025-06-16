@@ -1,0 +1,131 @@
+name: ❓ Question
+description: Ask a question about the AI Chatbot Web GUI
+title: "[QUESTION] "
+labels: ["question", "help-wanted"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question? We're here to help! ❓
+        
+        Please check our documentation first, then feel free to ask your question below.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm you've checked these resources first
+      options:
+        - label: I have read the README.md
+          required: true
+        - label: I have checked the documentation (DEPLOYMENT.md, GITHUB_SETUP.md)
+          required: true
+        - label: I have searched existing issues and discussions
+          required: true
+
+  - type: dropdown
+    id: question-category
+    attributes:
+      label: 📂 Question Category
+      description: What category does your question fall into?
+      options:
+        - Installation & Setup
+        - Configuration
+        - Usage & Features
+        - Deployment
+        - Troubleshooting
+        - Development & Contributing
+        - AI Integration
+        - Mobile/PWA
+        - Performance
+        - Security
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: ❓ Your Question
+      description: What would you like to know?
+      placeholder: Please describe your question in detail...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 🔍 Context
+      description: Provide any relevant context that might help us answer your question
+      placeholder: |
+        - What are you trying to achieve?
+        - What have you tried so far?
+        - Any specific use case or scenario?
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 🖥️ Environment Details
+      description: If relevant, please provide your environment details
+      placeholder: |
+        - Operating System:
+        - Python Version:
+        - Browser:
+        - Device Type:
+        - App Version:
+
+  - type: textarea
+    id: attempted-solutions
+    attributes:
+      label: 🔧 What Have You Tried?
+      description: What solutions or approaches have you already attempted?
+      placeholder: |
+        - Steps you've taken
+        - Documentation you've consulted
+        - Solutions you've tried
+
+  - type: textarea
+    id: expected-outcome
+    attributes:
+      label: 🎯 Expected Outcome
+      description: What outcome are you hoping to achieve?
+      placeholder: What would a successful resolution look like?
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: ⏰ Urgency
+      description: How urgent is this question for you?
+      options:
+        - Low - Just curious
+        - Medium - Would help my project
+        - High - Blocking my progress
+        - Critical - Production issue
+
+  - type: checkboxes
+    id: help-type
+    attributes:
+      label: 🤝 Type of Help Needed
+      description: What kind of help are you looking for?
+      options:
+        - label: Step-by-step guidance
+        - label: Code examples
+        - label: Configuration help
+        - label: Best practices advice
+        - label: Troubleshooting assistance
+        - label: Feature explanation
+        - label: Integration guidance
+        - label: Performance optimization
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: 📝 Additional Information
+      description: Any other information that might be helpful
+      placeholder: |
+        - Error messages (if any)
+        - Screenshots
+        - Log files
+        - Related links or resources

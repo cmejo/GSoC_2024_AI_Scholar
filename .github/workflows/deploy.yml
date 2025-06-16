@@ -1,0 +1,238 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest
+
+    - name: Run tests
+      run: |
+        python -m pytest test_chatbot.py -v
+
+    - name: Test application startup
+      run: |
+        timeout 30s python app.py &
+        APP_PID=$!
+        sleep 10
+        curl -f http://localhost:5000/api/health || exit 1
+        kill $APP_PID || true
+
+  docker-build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'release'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ secrets.DOCKER_USERNAME }}/ai-chatbot-web-gui
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy-to-heroku:
+    name: Deploy to Heroku
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'release' && github.repository_owner == 'YOUR_USERNAME'
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Heroku
+      uses: akhileshns/heroku-deploy@v3.12.14
+      with:
+        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+        heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+        heroku_email: ${{ secrets.HEROKU_EMAIL }}
+        dockerfile_path: ./Dockerfile
+        docker_build_args: |
+          SECRET_KEY
+          OLLAMA_BASE_URL
+      env:
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
+
+  deploy-to-railway:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'release'
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Railway
+      run: |
+        # Install Railway CLI
+        npm install -g @railway/cli
+        
+        # Deploy (requires RAILWAY_TOKEN secret)
+        railway deploy --service ${{ secrets.RAILWAY_SERVICE_ID }}
+      env:
+        RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  create-github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Generate changelog from commits since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -z "$LAST_TAG" ]; then
+          COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+        else
+          COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+        fi
+        
+        echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+        echo "$COMMITS" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: AI Chatbot Web GUI ${{ github.ref }}
+        body: |
+          ## 🚀 What's New
+          
+          ${{ steps.changelog.outputs.CHANGELOG }}
+          
+          ## 📦 Installation
+          
+          ### Quick Start
+          ```bash
+          # Download and extract the release
+          wget https://github.com/${{ github.repository }}/archive/${{ github.ref_name }}.tar.gz
+          tar -xzf ${{ github.ref_name }}.tar.gz
+          cd ai-chatbot-web-gui-${{ github.ref_name }}
+          
+          # Run the application
+          ./start.sh  # Linux/Mac
+          # or
+          start.bat   # Windows
+          ```
+          
+          ### Docker
+          ```bash
+          docker run -p 5000:5000 ${{ secrets.DOCKER_USERNAME }}/ai-chatbot-web-gui:${{ github.ref_name }}
+          ```
+          
+          ## 🔧 Requirements
+          - Python 3.8+
+          - Ollama (or compatible AI service)
+          - Modern web browser
+          
+          ## 📚 Documentation
+          - [Setup Guide](README.md)
+          - [Deployment Guide](DEPLOYMENT.md)
+          - [GitHub Setup](GITHUB_SETUP.md)
+          
+          ## 🐛 Bug Reports
+          Please report issues on our [GitHub Issues](https://github.com/${{ github.repository }}/issues) page.
+        draft: false
+        prerelease: false
+
+  notify-deployment:
+    name: Notify Deployment
+    runs-on: ubuntu-latest
+    needs: [docker-build-and-push, deploy-to-heroku, deploy-to-railway]
+    if: always() && github.event_name == 'release'
+
+    steps:
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      if: always()
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        text: |
+          🚀 AI Chatbot Web GUI ${{ github.ref_name }} deployment completed!
+          
+          Status: ${{ job.status }}
+          Repository: ${{ github.repository }}
+          Actor: ${{ github.actor }}
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Notify Discord
+      uses: Ilshidur/action-discord@master
+      if: always()
+      with:
+        args: |
+          🤖 **AI Chatbot Web GUI Deployment**
+          
+          **Version:** ${{ github.ref_name }}
+          **Status:** ${{ job.status }}
+          **Repository:** ${{ github.repository }}
+          **Deployed by:** ${{ github.actor }}
+          
+          🔗 [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
