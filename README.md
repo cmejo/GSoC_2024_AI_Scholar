@@ -1,27 +1,50 @@
-# AI Chatbot Web GUI
+# 🤖 AI Chatbot - Advanced Conversational Interface
 
-A responsive, mobile-ready web frontend for AI chatbot services built with Flask, JavaScript, and modern web technologies.
+A modern, full-stack AI chatbot application with advanced features including JWT authentication, real-time chat, session management, and a responsive React frontend.
 
-## Features
+![AI Chatbot](https://img.shields.io/badge/AI-Chatbot-blue?style=for-the-badge&logo=robot)
+![Python](https://img.shields.io/badge/Python-3.8+-blue?style=for-the-badge&logo=python)
+![React](https://img.shields.io/badge/React-18+-blue?style=for-the-badge&logo=react)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue?style=for-the-badge&logo=postgresql)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
 
-### 🎨 **Modern UI/UX**
-- Clean, intuitive interface with smooth animations
-- Responsive design that works on desktop, tablet, and mobile
-- Dark/light theme support with auto-detection
-- Customizable font sizes and accessibility options
+## ✨ Features
 
-### 📱 **Mobile-First Design**
-- Touch-optimized interactions
-- Mobile keyboard handling
-- Swipe gestures support
-- Progressive Web App (PWA) capabilities
-- Offline functionality with service worker
+### 🎨 **Modern Frontend**
+- **React 18** with modern hooks and context API
+- **Responsive design** with Tailwind CSS
+- **Dark/Light theme** support
+- **Mobile-optimized** interface
+- **Real-time chat** interface with typing indicators
+- **Session management** with search and organization
 
-### 🚀 **Real-time Communication**
-- WebSocket support for instant messaging
-- Typing indicators
-- Connection status monitoring
-- Auto-reconnection on network issues
+### 🔐 **Advanced Authentication**
+- **JWT-based authentication** with automatic token refresh
+- **Session expiration warnings** with proactive notifications
+- **Multi-step registration** with real-time validation
+- **User profile management** with avatar support
+- **Session tracking** across multiple devices
+
+### 💬 **Chat Features**
+- **Real-time messaging** with AI integration
+- **Chat history** with search, sort, and filtering
+- **Session organization** with rename and bulk operations
+- **Message persistence** with PostgreSQL storage
+- **Conversation context** maintenance
+
+### 🧭 **Navigation & UX**
+- **Seamless navigation** between Chat and History
+- **Active route highlighting** with visual indicators
+- **Mobile hamburger menu** with touch optimization
+- **Token status monitoring** with real-time updates
+- **Loading states** and smooth transitions
+
+### 🏗️ **Architecture**
+- **Flask backend** with RESTful API design
+- **PostgreSQL database** with migration support
+- **Docker containerization** for easy deployment
+- **Comprehensive testing** with pytest
+- **CI/CD workflows** with GitHub Actions
 
 ### 🤖 **AI Integration**
 - Compatible with Ollama and other AI services
