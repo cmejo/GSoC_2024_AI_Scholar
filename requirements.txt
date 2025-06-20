@@ -14,3 +14,55 @@ pytest-cov==4.1.0
 factory-boy==3.3.0
 click==8.1.7
 alembic==1.12.1
+
+# Enhanced LLM and AI dependencies
+huggingface-hub==0.19.4
+transformers==4.36.2
+torch==2.1.2
+accelerate==0.25.0
+bitsandbytes==0.41.3
+sentencepiece==0.1.99
+protobuf==4.25.1
+
+# System monitoring and performance
+psutil==5.9.6
+GPUtil==1.4.0
+nvidia-ml-py3==7.352.0
+
+# Advanced async and streaming
+aiohttp==3.9.1
+aiofiles==23.2.1
+websockets==12.0
+
+# Ollama integration
+ollama==0.1.7
+
+# RAG and Embeddings
+chromadb==0.4.18
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+PyPDF2==3.0.1
+python-docx==0.8.11
+beautifulsoup4==4.12.2
+
+# Fine-tuning (optional)
+torch==2.1.2
+transformers==4.36.2
+datasets==2.15.0
+peft==0.7.1
+accelerate==0.25.0
+
+# Data processing and utilities
+numpy==1.24.4
+pandas==2.1.4
+pydantic==2.5.2
+python-multipart==0.0.6
+
+# Logging and monitoring
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# Development and testing enhancements
+httpx==0.25.2
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0

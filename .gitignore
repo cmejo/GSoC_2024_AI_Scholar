@@ -1,10 +1,12 @@
-# AI Chatbot Web GUI - Git Ignore File
-
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -18,47 +20,121 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
 
-# Virtual Environments
-chatbot_env/
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-.venv/
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
 
-# Environment Variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Flask
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
 instance/
 .webassets-cache
 
-# IDE and Editor Files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
+# Scrapy stuff:
+.scrapy
 
-# Logs
-logs/
-*.log
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+chatbot_env/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Node.js
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 
 # Runtime data
 pids
@@ -73,8 +149,26 @@ coverage/
 # nyc test coverage
 .nyc_output
 
+# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+.grunt
+
+# Bower dependency directory (https://bower.io/)
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build/Release
+
 # Dependency directories
-node_modules/
+jspm_packages/
+
+# TypeScript v1 declaration files
+typings/
+
+# TypeScript cache
+*.tsbuildinfo
 
 # Optional npm cache directory
 .npm
@@ -97,6 +191,12 @@ node_modules/
 # Yarn Integrity file
 .yarn-integrity
 
+# dotenv environment variables file
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
@@ -108,6 +208,10 @@ node_modules/
 .nuxt
 dist
 
+# Gatsby files
+.cache/
+public
+
 # Storybook build outputs
 .out
 .storybook-out
@@ -115,6 +219,14 @@ dist
 # Temporary folders
 tmp/
 temp/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
 # OS generated files
 .DS_Store
@@ -125,78 +237,81 @@ temp/
 ehthumbs.db
 Thumbs.db
 
-# Database
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database files
 *.db
 *.sqlite
 *.sqlite3
+
+# Model files and data
+models/
+*.bin
+*.safetensors
+*.gguf
+*.ggml
+
+# Vector databases
+vector_db/
+chroma_db/
+*.faiss
+
+# Training data
+training_data/
+fine_tuned_models/
+
+# Uploaded files
+uploads/
+static/uploads/
+
+# Docker
+.dockerignore
+
+# Kubernetes secrets
+*secret*.yaml
+*secrets*.yaml
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Cloud deployment files with secrets
+deployment/*/secrets/
+deployment/*/.env
+deployment/*/config.json
 
 # Backup files
 *.bak
 *.backup
 *.old
 
-# Compiled CSS (if using preprocessors)
-*.css.map
+# Temporary deployment files
+task-definition.json
+uptime-check.json
 
-# Local configuration files
-config.local.py
-settings.local.py
+# Local development
+.local/
+local_config.py
 
-# Test coverage
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
+# AI/ML specific
+wandb/
+mlruns/
+.neptune/
+tensorboard_logs/
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Large files that shouldn't be in git
+*.tar.gz
+*.zip
+*.rar
+*.7z
 
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# PyCharm
-.idea/
-
-# AI Model files (if storing locally)
-*.bin
-*.safetensors
-models/
-
-# Docker
-.dockerignore
-
-# Kubernetes
-*.yaml.bak
-*.yml.bak
+# Sensitive configuration
+config/production.py
+config/secrets.py

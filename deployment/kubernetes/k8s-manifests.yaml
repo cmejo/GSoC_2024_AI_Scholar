@@ -1,0 +1,556 @@
+# Kubernetes Deployment Manifests for Enhanced AI Chatbot
+# Deploy with: kubectl apply -f k8s-manifests.yaml
+
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-chatbot
+  labels:
+    name: ai-chatbot
+
+---
+# ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-chatbot-config
+  namespace: ai-chatbot
+data:
+  FLASK_ENV: "production"
+  DB_HOST: "postgresql-service"
+  DB_PORT: "5432"
+  DB_NAME: "chatbot_db"
+  DB_USER: "chatbot_user"
+  OLLAMA_BASE_URL: "http://ollama-service:11434"
+  DEFAULT_MODEL: "llama2:7b-chat"
+
+---
+# Secret for sensitive data
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-chatbot-secrets
+  namespace: ai-chatbot
+type: Opaque
+data:
+  # Base64 encoded values - replace with actual values
+  SECRET_KEY: "Y2hhbmdlLXRoaXMtc2VjcmV0LWtleQ=="  # change-this-secret-key
+  JWT_SECRET_KEY: "Y2hhbmdlLXRoaXMtand0LXNlY3JldA=="  # change-this-jwt-secret
+  DB_PASSWORD: "Y2hhbmdlLXRoaXMtcGFzc3dvcmQ="  # change-this-password
+
+---
+# PostgreSQL Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+  namespace: ai-chatbot
+  labels:
+    app: postgresql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: ai-chatbot-config
+              key: DB_NAME
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: ai-chatbot-config
+              key: DB_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ai-chatbot-secrets
+              key: DB_PASSWORD
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgresql-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - chatbot_user
+            - -d
+            - chatbot_db
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - chatbot_user
+            - -d
+            - chatbot_db
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgresql-storage
+        persistentVolumeClaim:
+          claimName: postgresql-pvc
+
+---
+# PostgreSQL PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-pvc
+  namespace: ai-chatbot
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# PostgreSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-service
+  namespace: ai-chatbot
+  labels:
+    app: postgresql
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: postgresql
+
+---
+# Ollama Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: ai-chatbot
+  labels:
+    app: ollama
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+      - name: ollama
+        image: ollama/ollama:latest
+        ports:
+        - containerPort: 11434
+        env:
+        - name: OLLAMA_HOST
+          value: "0.0.0.0"
+        volumeMounts:
+        - name: ollama-storage
+          mountPath: /root/.ollama
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /api/tags
+            port: 11434
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/tags
+            port: 11434
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: ollama-storage
+        persistentVolumeClaim:
+          claimName: ollama-pvc
+
+---
+# Ollama PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-pvc
+  namespace: ai-chatbot
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi  # Large storage for models
+
+---
+# Ollama Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+  namespace: ai-chatbot
+  labels:
+    app: ollama
+spec:
+  ports:
+  - port: 11434
+    targetPort: 11434
+  selector:
+    app: ollama
+
+---
+# AI Chatbot Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-chatbot-backend
+  namespace: ai-chatbot
+  labels:
+    app: ai-chatbot-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-chatbot-backend
+  template:
+    metadata:
+      labels:
+        app: ai-chatbot-backend
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: postgres:15
+        command: ['sh', '-c', 'until pg_isready -h postgresql-service -p 5432 -U chatbot_user; do echo waiting for database; sleep 2; done;']
+      - name: wait-for-ollama
+        image: curlimages/curl:latest
+        command: ['sh', '-c', 'until curl -f http://ollama-service:11434/api/tags; do echo waiting for ollama; sleep 5; done;']
+      containers:
+      - name: ai-chatbot-backend
+        image: ai-chatbot:latest  # Replace with your actual image
+        ports:
+        - containerPort: 5000
+        envFrom:
+        - configMapRef:
+            name: ai-chatbot-config
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-chatbot-secrets
+              key: SECRET_KEY
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-chatbot-secrets
+              key: JWT_SECRET_KEY
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ai-chatbot-secrets
+              key: DB_PASSWORD
+        volumeMounts:
+        - name: app-storage
+          mountPath: /app/logs
+        - name: models-storage
+          mountPath: /app/models
+        - name: vector-db-storage
+          mountPath: /app/vector_db
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: app-storage
+        persistentVolumeClaim:
+          claimName: app-logs-pvc
+      - name: models-storage
+        persistentVolumeClaim:
+          claimName: models-pvc
+      - name: vector-db-storage
+        persistentVolumeClaim:
+          claimName: vector-db-pvc
+
+---
+# App Logs PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-logs-pvc
+  namespace: ai-chatbot
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Models PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-pvc
+  namespace: ai-chatbot
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+# Vector DB PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vector-db-pvc
+  namespace: ai-chatbot
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# AI Chatbot Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-chatbot-backend-service
+  namespace: ai-chatbot
+  labels:
+    app: ai-chatbot-backend
+spec:
+  ports:
+  - port: 5000
+    targetPort: 5000
+  selector:
+    app: ai-chatbot-backend
+
+---
+# Frontend Deployment (if using separate frontend)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-chatbot-frontend
+  namespace: ai-chatbot
+  labels:
+    app: ai-chatbot-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-chatbot-frontend
+  template:
+    metadata:
+      labels:
+        app: ai-chatbot-frontend
+    spec:
+      containers:
+      - name: ai-chatbot-frontend
+        image: ai-chatbot-frontend:latest  # Replace with your frontend image
+        ports:
+        - containerPort: 80
+        env:
+        - name: REACT_APP_API_URL
+          value: "http://ai-chatbot-backend-service:5000"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-chatbot-frontend-service
+  namespace: ai-chatbot
+  labels:
+    app: ai-chatbot-frontend
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: ai-chatbot-frontend
+
+---
+# Ingress for external access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-chatbot-ingress
+  namespace: ai-chatbot
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: ai-chatbot.local  # Replace with your domain
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-chatbot-backend-service
+            port:
+              number: 5000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-chatbot-frontend-service
+            port:
+              number: 80
+
+---
+# HorizontalPodAutoscaler for backend
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-chatbot-backend-hpa
+  namespace: ai-chatbot
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-chatbot-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# NetworkPolicy for security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-chatbot-network-policy
+  namespace: ai-chatbot
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ai-chatbot
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: ai-chatbot
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+
+---
+# ServiceMonitor for Prometheus (if using Prometheus Operator)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ai-chatbot-metrics
+  namespace: ai-chatbot
+  labels:
+    app: ai-chatbot-backend
+spec:
+  selector:
+    matchLabels:
+      app: ai-chatbot-backend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s

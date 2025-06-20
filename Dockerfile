@@ -12,6 +12,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y \
     curl \
     gcc \
+    g++ \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
@@ -48,7 +50,7 @@ RUN rm -rf \
     start.bat
 
 # Create necessary directories
-RUN mkdir -p logs static/uploads && \
+RUN mkdir -p logs static/uploads models/hf_cache && \
     chown -R chatbot:chatbot /app
 
 # Switch to non-root user

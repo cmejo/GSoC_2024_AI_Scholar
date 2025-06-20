@@ -72,6 +72,10 @@ class ChatSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     session_name = db.Column(db.String(255))
+    model_name = db.Column(db.String(100), default='llama2')  # Current model for this session
+    system_prompt_type = db.Column(db.String(50), default='general')  # System prompt type
+    custom_system_prompt = db.Column(db.Text)  # Custom system prompt
+    model_parameters = db.Column(db.JSON)  # Model parameters as JSON
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
@@ -99,6 +103,10 @@ class ChatSession(db.Model):
             'id': self.id,
             'user_id': self.user_id,
             'name': self.session_name,
+            'model_name': self.model_name,
+            'system_prompt_type': self.system_prompt_type,
+            'custom_system_prompt': self.custom_system_prompt,
+            'model_parameters': self.model_parameters,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'message_count': self.get_message_count(),
